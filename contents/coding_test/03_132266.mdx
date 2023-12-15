@@ -1,0 +1,189 @@
+---
+title: '부대 복귀'
+description: '연습문제'
+order: 3
+---
+
+import TestInfo from './components/TestInfo'
+
+<TestInfo url='https://school.programmers.co.kr/learn/courses/30/lessons/132266' level={3} solved={false}></TestInfo>
+
+# 문제 분석
+
+각 포인트에서 특정 포인트로 가야 합니다.
+모든 포인트와 포인트 사이 거리는 1이라고 합니다.
+그런데 어떤 포인트에서 포인트까지 가는 길이 부서져서 갈 수 없는 길도 있다고 하는군요.
+이 때 출발지에서 도착지까지 가장 빠르게 도착하는 경로를 계산하는 문제에요.
+모든 경로가 차단되어 도착지까지 절대 갈 수 없는 경우가 생긴다면 -1을 반환합니다.
+
+간단하게 생각하면 최단 경로를 찾는 다익스트라 알고리즘으로 풀 수 있을 것 같아요.
+
+# 풀이
+
+먼저 경로에 대한 연결을 나타내는 행렬을 만들어보죠.
+```python
+import numpy as np
+matrix = np.ones((n, n)) * (n+1)
+
+for road in roads:
+    node1 = road[0]-1
+    node2 = road[1]-1
+    matrix[node1, node2] = 1
+    matrix[node2, node1] = 1
+
+for i in range(n):
+    matrix[i, i] = 0
+```
+
+자기 자신에 대한 경로는 0으로 만들어 주고 연결이 되지 않은 지역은 포인트의 수 보다 큰 n+1로 정해주었어요.
+이제 다익스트라 알고리즘을 사용하여 출발 지점에서 각 포인트까지 최단 경로를 찾아봅시다.
+
+```python
+def get_min_route(s, e):
+    for i in range(n):
+        argsort = matrix[s].argsort()
+        min_idx = argsort[i]
+        if s == min_idx:
+            continue
+            
+        min_val = matrix[s, min_idx]
+        for j in range(n):
+            s_to_j = min_val + matrix[min_idx, j]
+            if matrix[s, j] > s_to_j:
+                matrix[s, j] = s_to_j
+                
+    result = matrix[s, e]
+    return -1 if result > n else result
+```
+
+각 시작 포인트에서 다른 포인트까지 연결된 거리가 짧은 순으로 정렬한 후 경유하여 도착하는 값까지 모두 계산하였습니다.
+이때 도착 포인트까지 연결이 없어 n+1 값을 그대로 가지는 경로에 대해 -1을 반환하도록 만들어 주었어요.
+이 코드를 제출하여 결과를 확인해 봅시다.
+
+```python
+import numpy as np
+
+def solution(n, roads, sources, destination):
+    answer = []
+    matrix = np.ones((n, n)) * (n+1)
+    
+    for road in roads:
+        node1 = road[0]-1
+        node2 = road[1]-1
+        matrix[node1, node2] = 1
+        matrix[node2, node1] = 1
+    
+    for i in range(n):
+        matrix[i, i] = 0
+    
+    def get_min_route(s, e):
+        for i in range(n):
+            argsort = matrix[s].argsort()
+            min_idx = argsort[i]
+            if s == min_idx:
+                continue
+                
+            min_val = matrix[s, min_idx]
+            for j in range(n):
+                s_to_j = min_val + matrix[min_idx, j]
+                if matrix[s, j] > s_to_j:
+                    matrix[s, j] = s_to_j
+                    
+        result = matrix[s, e]
+        return -1 if result > n else result
+                
+    for source in sources:
+        result = get_min_route(source-1, destination-1)
+        answer.append(result)
+        
+    return answer
+```
+
+테스트 1~5까지 통과라고 뜨지만 6~16까지 시간초과, 런타임 에러가 발생하네요.
+알고리즘을 조금 더 효과적으로 수정할 필요가 있습니다.
+
+우리는 여러 시작 포인트에서 도착 포인트까지 경로를 조사하는 형태로 알고리즘을 구성하였지만,
+이는 각 시작 포인트마다 모든 포인트까지 경로를 조사하는 비효율적인 방법었네요.
+생각해보면 그냥 도착포인트에 대한 모든 포인트까지 경로를 한번만 조사하면 되는 간단한 문제였어요.
+
+위 방법으로 시간초과는 해결할 수 있겠지만 정확하게 어떤 부분에러 런타임 에러가 발생하는지 확인을 할 필요가 있겟어요.
+단순히 numpy 배열 만드는 것만으로도 런타임 오류가 발생하네요.
+메모리의 크기가 정해져서 그런 걸까요?
+
+```python
+matrix = [[n+1]*n for _ in range(n)]
+```
+단순히 위 배열을 선언하는 것만 해도 11~16번이 시간 초과로 발생합니다.
+다익스트라 알고리즘은 안되는 듯,,
+
+# 힌트
+BFS로 풀면 된다는 힌트를 받았어요.
+사실상 그냥 정답을 받은거나 다름 없는,,
+이런 알고리즘에 제가 취약하다는 것을 또 깨닫는 순간입니다.
+BFS에 대한 정리는 [여기](/algorithm/bfs)에 해두었어요
+
+이 문제는 제한사항을 보면 $3 \leq n \leq 100000$으로 포인트의 수가 굉장히 많습니다.
+이를 $n \times n$ 배열로 만든다면 메모리가 부족할 수 밖에 없었을 거에요.
+
+또한 각 포인트와 포인트의 거리는 1로 동일하다는 것을 주목해야 했어요.
+가중치가 없는 형태이기 때문에 다익스트라 알고리즘을 굳이 사용하지 않아도 되었지요.
+
+```python
+graph = [[] for _ in range(n+1)]
+for road in roads:
+    node1 = road[0]
+    node2 = road[1]
+    graph[node1].append(node2)
+    graph[node2].append(node1)
+```
+먼저 각 노드들과 연결된 노드들의 관계를 그래프로 설정하도록 합니다.
+
+```python
+visited = {destination: 0}
+queue = deque([(destination, 0)])
+while(len(queue) > 0):
+    item = queue.popleft()
+    node = item[0]
+    wide = item[1]
+    for tar in graph[node]:
+        if tar not in visited:
+            queue.append((tar, wide+1))
+            visited[tar] = wide+1
+```
+이제 queue와 그래프를 이용하여 연결된 노드들에 대한 방문을 우선으로 하는 BFS 알고리즘을 만들었어요.
+이를 실행해보니 깔끔하게 모든 테스트가 완료되었어요.
+
+전체 코드
+```python
+from collections import deque
+
+def solution(n, roads, sources, destination):
+    answer = []
+    
+    graph = [[] for _ in range(n+1)]
+    for road in roads:
+        node1 = road[0]
+        node2 = road[1]
+        graph[node1].append(node2)
+        graph[node2].append(node1)
+
+    visited = {destination: 0}
+    queue = deque([(destination, 0)])
+    while(len(queue) > 0):
+        item = queue.popleft()
+        node = item[0]
+        wide = item[1]
+        for tar in graph[node]:
+            if tar not in visited:
+                queue.append((tar, wide+1))
+                visited[tar] = wide+1
+        
+    for source in sources:
+        if source in visited:
+            answer.append(visited[source])
+        else:
+            answer.append(-1)
+    
+    return answer
+```
+
