@@ -101,10 +101,10 @@ $$
 
 사실 위와 같은 방식은 몇 가지 문제가 있어요.
 
-1\. <ColorText color='var(--primary)'>단어의 순서를 고려하지 못합니다.</ColorText>
+1\. <ColorText color='var(--error)'>단어의 순서를 고려하지 못합니다.</ColorText>
 RNN 에서 각 단어의 순서대로 연산을 진행하며 자연스럽게 순서에 대한 정보도 포함되고 있습니다.
 하지만 위와 같은 self-attention 방식은 모든 단어에 대한 연산을 병렬적으로 진행하여 순서에 대한 정보가 존재하지 않아요.
-그래서 이를 해결하기 위해 <ColorText color='var(--info-color)'>위치에 관한 정보를 embedding 해줍니다.</ColorText>
+그래서 이를 해결하기 위해 <ColorText color='var(--info)'>위치에 관한 정보를 embedding 해줍니다.</ColorText>
 
 $$
 \widetilde{x}_i = x_i + p_i, \quad p_i \in \mathbb{R}^d \quad (for \; i \in {1,2,\cdots,n})
@@ -113,14 +113,23 @@ $$
 위치 정보 $p_i$는 `sinusoidal position`으로 나타냅니다.
 이는 다양한 주기를 가진 사인, 코사인 함수를 연결하여 각 단어의 위치 정보를 인코딩하는 방식이에요.
 
-이는 <ColorText color='var(--info-color)'>위치 정보가 절대적이지 않고 주기성을 가져 모델이 위치 정보를 유연하게 해석합니다.</ColorText>
-그리고 <ColorText color='var(--info-color)'>주기적인 패턴 덕분에 모델이 훈련 중 본 적 없는 더 긴 시퀀스에 대해 추론할 수 있습니다.</ColorText>
-<ColorText color='var(--primary)'>그러나 위치 표현이 학습 가능하지 않고 실제로 긴 시퀀스에 대한 효과가 제한적일 수 있습니다.</ColorText>
+* <ColorText color='var(--info)'>위치 정보가 절대적이지 않고 주기성을 가져 모델이 위치 정보를 유연하게 해석합니다.</ColorText>
+* <ColorText color='var(--info)'>주기적인 패턴 덕분에 모델이 훈련 중 본 적 없는 더 긴 시퀀스에 대해 추론할 수 있습니다.</ColorText>
+* <ColorText color='var(--error)'>그러나 위치 표현이 학습 가능하지 않고 실제로 긴 시퀀스에 대한 효과가 제한적일 수 있습니다.</ColorText>
 
-<ColorText color='var(--primary)'>비선형적인 결과를 만들어 낼 수 없어요.</ColorText>
+2\. <ColorText color='var(--error)'>비선형적인 결과를 만들어 낼 수 없어요.</ColorText>
 가중 합을 사용하기 때문에 self-attention 만으로는 비선형적인 결과를 만들어 낼 수 없어요.
-이는 <ColorText color='var(--info-color)'>self-attention 결과에 feed-forward network를 적용하여 해결할 수 있습니다.</ColorText>
+이는 <ColorText color='var(--info)'>self-attention 결과에 feed-forward network를 적용하여 해결할 수 있습니다.</ColorText>
 
-<ColorText color='var(--primary)'>문장을 예측할 때 미래를 보지 않아야 합니다.</ColorText>
+3\. <ColorText color='var(--error)'>문장을 예측할 때 미래를 보지 않아야 합니다.</ColorText>
 self-attention은 문장의 모든 단어를 보고 연산을 진행하기 때문에 예측 시점에서 미래의 단어까지 정보로 들어올 수 있어요.
-이는 <ColorText color='var(--info-color)'>미래에 대한 정보를 masking 하는 기법을 사용하여 해결할 수 있어요.</ColorText>
+이는 <ColorText color='var(--info)'>미래에 대한 정보를 masking 하는 기법을 사용하여 해결할 수 있어요.</ColorText>
+
+![](assets/attention/04.png)
+
+$$
+e_{ij} = \begin{Bmatrix} q_i^T k_j, j \leq i \\ -\infty \end {Bmatrix}
+$$
+
+Attention distribution을 구하기 위해 softmax를 할 때, $- \infty$ 값은 0에 가까운 값이 될 거에요.
+그래서 고려하지 않는 정보가 되는 것입니다. 
