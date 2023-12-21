@@ -33,13 +33,13 @@ DoG를 이용하면 edge나 corner와 같은 keypoint를 추출할 수 있다.
 $$$
 DoG:D(H)=H\cdot G(\sigma_i)-H\cdot G(\sigma_j)
 $$$
-![DoG](assets/feature_matching/01.PNG)
+![DoG](assets/feature_matching/01.png)
 
 위 scale-space에서 한 octave당 4개의 DoG, 총 16개의 DoG가 생성된다.
 
 ## Keypoint Localization
 생성된 동일한 octave내 DoG 이미지들에서 극대값, 극소값의 위치를 이용하여 keypoint를 찾는다.
-![find keypoint](assets/feature_matching/02.PNG)
+![find keypoint](assets/feature_matching/02.png)
 
 SIFT에서는 target point와 동일한, 상위의, 그리고 하위의 DoG이미지에서 자신의 이웃 픽셀에 대해 각각의 값과 target point의 값을 비교하였을 때, target point가 가장 크거나 작을 경우 keypoint로 판단한다.
 이를 $D(x, y, \sigma^n)$으로 표시한다.
@@ -60,24 +60,24 @@ $$
 $$
 \theta(x,y)=\tan^{-1}((L(x,y+1)-L(x,y-1))/(L(x+1,y)-L(x-1,y)))
 $$
-![orientation assignment](assets/feature_matching/03.PNG)
+![orientation assignment](assets/feature_matching/03.png)
 
 L은 Guassian blurred image이다. 간단하게 보면 상하, 좌우 gradient를 이용하여 각도를 구하는 것 같다. (m은 뭐임?)  
-![keypoint orientation](assets/feature_matching/04.PNG)
+![keypoint orientation](assets/feature_matching/04.png)
 
 이후 keypoint와 픽셀간 거리에 따른 가중치를 적용하고 각 방향들에 대해 10도씩 분류한다. 
 이때 가장 큰 값을 가지거나 일정 threshold 이상의 크기를 가지는 방향을 keypoint 방향으로 설정한다.
 
-![orientation normalization](assets/feature_matching/05.PNG)
+![orientation normalization](assets/feature_matching/05.png)
 
 설정된 방향의 반대 방향으로 회전시키는 orientation normalization 이라고 한다.
 
-![feature descriptor](assets/feature_matching/06.PNG)
+![feature descriptor](assets/feature_matching/06.png)
 그래서 각 keypoint의 16x16사이즈 window를 4x4의 cell로 나누어 각 cell마다 orientation histogram, normalization을 진행하여 feature에 대한 descriptor를 만들어 낸다.
 
 ## Feature Matching
 생성된 두 이미지의 feature들의 descriptor의 $L_2$ distance를 이용하여 각 feature를 matching한다.
-![feature distance](assets/feature_matching/07.PNG)
+![feature distance](assets/feature_matching/07.png)
 
 위 그림과 같이 $f_1$과 두 개의 feature $f_2$, ${f_2}'$이 유사한 경우가 있다.
 그래서 best distance와 second distance를 이용해 ratio distance($\frac{\left\|f_1-f_2 \right\|}{\left\|f_1-{f_2}' \right\|}$)를 구한다.
@@ -88,10 +88,10 @@ ratio distance가 threshold 이하일 때 유효한 matching으로 판단한다.
 ## 정확도 측정
 여타 이진분류 문제와 동일한 측정 방법을 사용하는듯!
 
-![eval1](assets/feature_matching/08.PNG)
+![eval1](assets/feature_matching/08.png)
 
 유효하다고 판단한 matching중 (옳은 matching / 전체 matching) 이 precision, (옳은 matching / 실제 matching) 이 recall.
 
-![ROC curve](assets/feature_matching/09.PNG)
+![ROC curve](assets/feature_matching/09.png)
 
 ROC curve라고 recall과 precision을 통해 그래프를 나타내는데 그래프 아래 면적이 1에 가까울수록 더 좋은 detector라고 할 수 있다.
