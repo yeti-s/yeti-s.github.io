@@ -1,0 +1,30 @@
+---
+title: 'Towards a Human-like Open-Domain Chatbot'
+description: 'Towards a Human-like Open-Domain Chatbot 논문 리뷰'
+order: 10
+---
+
+import Comment from '@contents/components/Comment';
+
+[Towards a Human-like Open-Domain Chatbot](https://arxiv.org/pdf/2001.09977.pdf) 논문을 바탕으로 작성하였습니다.
+
+# Introduction
+
+`Open-domain chatbot`은 어느 주제와도 대화를 할 수 있는 작업입니다.
+몇몇의 open-domain chatbot은 사람과 같은 속성을 보이지만, knowledge-based, retrieval-based, rule-based 을 이용한 dialog manage와 같은 복잡한 구조를 가지고 있어요.
+현재 많은 연구에도 open-domain chatbot은 아직 일반적으로 사용되지 못하고 있습니다.
+
+우리는 `Meena`라는 소셜 미디어에서 약 40억개의 필터링된 단어로 학습한 end-to-end 생성형 chatbot 모델을 만들었어요.
+`Meena`를 통해 큰 규모의 작은 perplexity 모델이 좋은 대화를 이끌어 내는 것을 볼 수 있었습니다.
+우리는 seq2seq 모델을 이용했고, `multi-turn conversation`을 이용하여 최대 7번 까지 주고받는 대화를 이용하여 학습을 진행하였어요.
+2.6B 파라미터를 가진 모델이 perplexity 10.2로 가장 좋은 성능을 달성하였습니다.
+
+`Meena`와 다른 chabot들의 정확한 측정을 위해, `SSA(Sensibleness and Specificity Average)`를 활용하였어요.
+`SSA`는 먼저 봇의 대답이 충분히 문맥에 맞게 이해되는지를 나타내는 sensibleness로 구성되어 있습니다.
+그러나 sensibleness를 위해 그 응답이 모호하고 당연한 대답만을 내는 안전한 전략을 사용하도록 학습될 수 있는 것이죠.
+그래서 우리는 해당 문맥에서 구체적은 답을 주는지를 나타내는 specificity를 함께 구성하였습니다.
+이는 generic과 lively한 답변을 성공적으로 구별해낼 수 있었어요.
+
+<Comment>"I don't know." 와 같은 구체적이지 않고 어느 상황에서도 사용될 수 있는 대답들이 모호하고 당연한 대답</Comment>
+
+<mark>하이라이트</mark>
