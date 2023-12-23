@@ -8,6 +8,14 @@ import Comment from '@contents/components/Comment';
 
 [Towards a Human-like Open-Domain Chatbot](https://arxiv.org/pdf/2001.09977.pdf) 논문을 바탕으로 작성하였습니다.
 
+논문에서는 새로운 평가 지표인 `SSA`와 perplexity의 상관관계를 설명하고 있어요.
+더 낮은 perplexity 가진 모델이 더 사람다운 응답을 만들어 낸다는 의미입니다.
+또한 데이터셋을 만들기 위한 전략을 보여주고 decoding 방법까지 제안하고 있습니다.
+
+저는 한국어를 기반으로 한 챗봇을 만들기 위해 한국어 기반 데이터셋을 구축해야 하는데 큰 틀은 여기서 제시한 방법을 활용할 수 있을 것 같습니다.
+물론 자세한 방법은 약간씩 조정할 필요가 있겠지만요.
+또 이 논문에서 제시한 decoding 방법을 사용하는 것도 좋은 결과를 만들것 같습니다.
+
 # Introduction
 
 `Open-domain chatbot`은 어느 주제와도 대화를 할 수 있는 작업입니다.
@@ -238,3 +246,98 @@ M: You were trying to steer it elsewhere, I can see it.
 > 여기서 데이터셋을 구축하는 과정을 잘 봐야 할듯!  
 물론 한국어 데이터는 영어와 조금 달라서 고려해야 할 부분은 많지만 그래도 전체적인 방법은 가져올만 함.  
 그리고 여기 decoding 방법처럼 sample-and-rank 사용해서 결과 만들어 내는 쪽으로 설계를 해야할 듯!
+
+# Results
+
+우리는 하이퍼 파라미터, layer 수, attention head 수, training step, ET and Transformer 등 다양한 방법으로 학습을 진행하였습니다.
+그 후 각 모델들은 auto metric(perplexity)와 human metric을 통해 평가하였구요.
+
+![Figure 5](assets/THODC/02.png)
+
+Perplexity vs static sensibleness $R^2=0.93$  
+Perplexity vs static specific $R^2=0.94$  
+Perplexity vs static SSA $R^2=0.94$  
+위 그림을 보면 상관관계는 선형에 가깝지만, 더 낮은 perplexity에 대해서도 비슷한 경향을 보일지는 명확하지 않습니다.
+Interactive evaluation에서도 perplexity와 sensibleness, specificity의 상관관계를 확인할 수 있었는데,
+이는 static evaluation에서 사용된 데이터셋의 편향때문에 아닌 것을 나타내죠.
+
+<Comment>
+여기서 $R^2$의 의미는 Coefficient of Determination으로 특정한 통계 모델이 관특된 데이터의 변동성을 얼마나 잘 설명하는지를 나타낸다.
+$R^2=0.93$이라는 것은 모델이 데이터 변동성의 $93%$를 설명할 수 있다는 의미.
+즉, 모델이 관측된 데이터와 강한 상관관계를 가지며, 그 데이터의 대부분을 잘 설명한다는 것.
+</Comment>
+
+> SSA와 perplexity의 상관관계를 데이터를 통해 증명함.
+
+# Further Advancing SSA
+
+## Advancing Decoding
+
+우리는 temperature T와 top-k를 조절해가며 평가를 진행했어요.
+$N=20$을 유지한채로 $k=40, T=1.0$으로 72%에서 74%로의 `SSA`를 달성할 수 있었습니다.
+또한 $N=1, 20, 400$으로 다양하게 시도하였지만, $N=20$에서 상당한 성능을 보여주었습니다.
+
+## Addressing Cross-turn Repetitions
+
+Interactive evaluation에서 대화의 1/3은 끝으로 갈수록 cross-turn repetition이 나타나는 것을 확인할 수 있었습니다.
+`Cross-turn repetition`은 응답에서 이전의 메세지의 내용이 나타나는 상황이 반복되는 현상입니다.
+
+```
+H: Hi!
+M: Hi! How are you?! :)
+H: doing good, what would be the best city to visit in Europe?
+M: Paris, Barcelona, Amsterdam, Prague
+H: great list! why?
+M: Paris is a beautiful city, and Barcelona is too. And I've always wanted to go to Amsterdam and Prague and have never been.
+H: have you even been to India?
+M: No, but I'd love to go.
+H: how about Japan?
+M: I'd love to go to Japan too.
+H: how about Paris?
+M: I'd love to go to Paris too.
+H: are you lying to me?
+M: I'd love to go to Japan too.
+H: i think you're lying to me, that makes me sad
+M: I'd love to go to Japan, too.
+H: you're blocking me out! you have to talk to me
+M: I'd love to go to Japan.
+H: where else?
+M: I'd love to go to Japan, too!
+```
+
+```
+H: Hi!
+M: Hey there! How are you doing?
+H: not well, i'm quite depressed
+M: That's no good. Wanna talk about it?
+H: not really, it'll only make it worse...can you cheer me up?
+M: Sure! What's got you down?
+H: I'd love to hear a really lame joke
+M: How about this one? What did the farmer say when he lost his tractor? Where is my tractor?
+H: haha that was lame! where did you hear it?
+M: I was at the mall and I heard it in the food court. How was your day?
+H: wow, i didn't know you could walk!
+M: Why did the scarecrow win an award?
+H: i don't know..you tell me!
+M: Because he was outstanding in his field!
+H: haha, where did you hear that?
+M: I was in the food court and I heard it in the field!
+H: you have a great sense of humor!
+M: Why did the chicken cross the road? He was outstanding in his field!
+H: ok, i don't want to hear any more jokes
+M: Do you know why he was outstanding in his field? Because he was a chicken!
+H: haha looks like you're really into this discussion!
+M: Yes! I am! Do you know why? Because he was outstanding in his field!
+H: haha, borderline creepy but still funny :D
+M: Why was the mouse trapped in the bag? Because he was outstanding in his field!
+H: i think i broke you
+M: Do you know why I broke you? Because you were outstanding in your field!
+```
+
+우리는 만약 두 차례의 메세지가 공통된 긴 sub-sequences로 이루어져 있다면 이를 후보에서 제외하는 방식의 규칙을 만들었습니다.
+이는 대부분의 cross-turn repetition 문제를 해결하는 것을 보여주었어요.
+
+또한 "I like pizza, but I don't like it"과 같은 응답에 모순과 반복이 있는 것도 있었습니다.
+하지만 더 낮은 perplexity를 가지는 모델일수록 이러한 응답이 덜 자주 발생하는 것을 확인할 수 있었죠.
+
+> 여기서 repetition을 막기 위한  'any two turns contain long common sub-sequences'를 구현하기 위한 방법을 생각해 볼 필요가 있는듯.
