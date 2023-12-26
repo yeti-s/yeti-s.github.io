@@ -1,13 +1,78 @@
 ---
-title: 'Recipes for building an open-domain chatbot'
-description: 'Recipes for building an open-domain chatbot 논문 리뷰'
+title: 'BlenderBot 1.0'
+description: 'BlenderBot 1.0과 관련된 여러 논문 리뷰'
 order: 11
-date: '2023년 12월 11일'
+date: '2023년 12월 24일'
 ---
 
 import Comment from '@contents/components/Comment';
 
-[Recipes for building an open-domain chatbot](https://arxiv.org/pdf/2004.13637.pdf) 논문을 바탕으로 작성하였습니다.
+[Can You Put it All Together: Evaluating Conversational Agents' Ability to Blend Skills](https://arxiv.org/pdf/2004.08449.pdf)  
+[Recipes for building an open-domain chatbot](https://arxiv.org/pdf/2004.13637.pdf)  
+논문을 바탕으로 작성하였습니다.
+
+
+
+
+좋은 open-domain conversational agent는 공감하며 듣고, 지식적인(?) 응답 제공하고, 다양한 주제에 대해 대화하는 능력을 고루 가져야 해요.
+보통 연구는 한 가지 작업에만 중점되어있는데, `BST(Blended Skill Talk)`
+
+PersonaChat dataset의 확장인 ConvAI2 dataset을 통해 대화하는 능력 포착
+Wizard of Wikipeida task를 통해 어느 주제에 대해 깊은 지식으로 대화하는 것을 평가
+EmpatheticDiaglogues benchmark를 통해 감정적으로 그 사람의 상황에 공감하는 능력을 평가 
+
+`ConvAI2` dataset은 "I have a pet hamster."와 같은 몇몇 문장으로 persona가 할당된 worker pair의 대화
+`WoW(Wizard of Wikipedia)` wikipeida의 정보를 바탕으로 한 대화를 탐구하는 것을 목표
+`ED(EmpatheticDialogues)`는 감정적인 상황에 대해 이야기하고 이를 듣고 반응해주는 대화
+
+
+
+
+
+모델이 얼마나 blended objetive한지 측정하기 위해 `BST(Blended Skill Talk)`를 사용
+`BST(Blended Skill Talk)`는 지식적인, 공감적인, 또는 사적인 디테일을 가진 대화로 구성되어 있음
+
+![](assets/blenderbot/00.png)
+
+### Guided Collection
+
+`BST`를 수집하기 위한 대화에서 특정한 스킬(지식 기반, 감정적인, 사적인 상황)만을 사용하거나 
+너무 일반적인 대화(직전 대화와는 너무 다른 스킬을 사용하게되는 경향)를 막기 위해 guided speaker와 unguided speaker로 구성했음.
+guided speaker는 각 기술에 대해서만 학습된(각각 ConvAI2, ED, WoW로만 학습된) 모델들로 응답에 대한 선택지를 받을 수 있는데 이를 무시하거나 수정하거나 할 수 있음.
+대화는 unguided spspeaker로 부터 시작.
+
+![](assets/blenderbot/01.png)
+표 1을 보면 여러 상황에서 대화가 시작되었을 때, guided speaker가 응답으로 제안을 사용한 것은 약 21%이고 각 task에 대해 균등하게 선택된 것을 볼 수 있음
+또 unguided speaker 응답의 46.1%는 직전 대화 모드와 동일한 모드를 사용하는 것을 볼 수 있었다. (랜덤할 때는 33%에 반해)
+
+### BLended Initial Contexts
+
+각 speaker에게 ConvAI2 dataset에서 무작위로 선택된 persona 문장 쌍이 할당됨.
+서로 자신의 persona 만 볼 수 있음
+대화는 각 스킬에서 랜덤하게 선택된 한 쌍의 발화로 시작.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Introduction
 
