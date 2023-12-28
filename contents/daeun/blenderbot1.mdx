@@ -9,152 +9,97 @@ import Comment from '@contents/components/Comment';
 
 [Can You Put it All Together: Evaluating Conversational Agents' Ability to Blend Skills](https://arxiv.org/pdf/2004.08449.pdf)  
 [Recipes for building an open-domain chatbot](https://arxiv.org/pdf/2004.13637.pdf)  
+[Poly-encoders: architectures and pre-training strategies for fast and accurate multi-sentence scoring](https://arxiv.org/pdf/1905.01969.pdf)  
 논문을 바탕으로 작성하였습니다.
 
+사람과 같은 대화는 어떻게 정의할 수 있을까요?
+논문에서는 사람과 같은 대화를 상대방의 말에 공감할 수 있고, 지식이 필요한 주제에 대해 대화할 수 있고, 개인이 겪은 경험과 성격에 기반한 응답을 만들 수 있어야 합니다.
+기존의 각 작업에 대한 여러 모델이 등장하였지만, 이를 모두 다룰 수 있는 open-domain conversation을 위해서는 추가적인 데이터가 필요하다고 생각하였어요.
 
 
+# BST
 
-좋은 open-domain conversational agent는 공감하며 듣고, 지식적인(?) 응답 제공하고, 다양한 주제에 대해 대화하는 능력을 고루 가져야 해요.
-보통 연구는 한 가지 작업에만 중점되어있는데, `BST(Blended Skill Talk)`
+`BST(Blended Skill talk)`는 위 모든 작업을 번갈아가며 수행할 수 있도록 여러 데이터를 이용하여 구성했습니다.
+논문에서는 크게 3가지 dataset을 활용하여 `BST`를 만들었어요.
 
-PersonaChat dataset의 확장인 ConvAI2 dataset을 통해 대화하는 능력 포착
-Wizard of Wikipeida task를 통해 어느 주제에 대해 깊은 지식으로 대화하는 것을 평가
-EmpatheticDiaglogues benchmark를 통해 감정적으로 그 사람의 상황에 공감하는 능력을 평가 
+* ConvAI2  
+`ConvAI2`는 각 발화자가 서로에 대해 알아가기 위해 자신의 페르소나에 의거해 대화를 이어나가도록 만들어진 데이터입니다.
+발화자는 상대방의 페르소나를 알아내기 위해 질문과 답을 주고 받으며 대화를 이어나가는 것이죠.
+이러한 대화 이력을 통해 bot에게 주어진 페르소나와 일관성 있는 답변을 생성하는 능력을 기를 수 있습니다.
 
-`ConvAI2` dataset은 "I have a pet hamster."와 같은 몇몇 문장으로 persona가 할당된 worker pair의 대화
-`WoW(Wizard of Wikipedia)` wikipeida의 정보를 바탕으로 한 대화를 탐구하는 것을 목표
-`ED(EmpatheticDialogues)`는 감정적인 상황에 대해 이야기하고 이를 듣고 반응해주는 대화
+* ED(Empathetic Dialogues)  
+`ED`는 감정적인 대화로 구성된 데이터입니다.
+한 발화자가 개인적인 상황에 대해 묘사하면, 상대 발화자가 이에 공감을 보여주는 대화로 구성되어있죠.
+공감을 보여주는 발화자의 역할을 모델이 수행하도록 학습을 진행하여 bot이 공감적인 응답을 생성하도록 만들 수 있습니다.
 
+* WoW(Wizard of Wikipedia)  
+`WoW`는 주제에 대한 깊이있는 지식을 요하는 대화를 기반으로 구성하였습니다.
+무작위로 선택된 주제에 대해 retrieval system을 통해 선별된 Wikipedia 주제를 활용하여 대화를 진행하는 방식입니다.
 
-
-
-
-모델이 얼마나 blended objetive한지 측정하기 위해 `BST(Blended Skill Talk)`를 사용
-`BST(Blended Skill Talk)`는 지식적인, 공감적인, 또는 사적인 디테일을 가진 대화로 구성되어 있음
+논문에서는 위 3가지 데이터를 활용하여 각 작업을 모두 수행할 수 있는 응답을 만들어내는 모델을 만드려고 합니다.
+이를 위해서 응답을 생성할 때 상황에 맞춰 위 데이터를 선택적으로 사용하는 데이터를 만든 것이 바로 `BST`입니다.
 
 ![](assets/blenderbot/00.png)
 
-### Guided Collection
+데이터를 구성하기 위해 두 발화자는 `ConvAI2`로 부터 임의로 선택된 페르소나를 할당받습니다.
+또 대화는 `ConvAI2`, `ED`, `WoW` 데이터중 하나의 대화로부터 시작됩니다.
+이때 한 가지 스킬(공감, 지식, 페르소나)만을 사용하여 대화하는 것을 막기 위해 각 발화자를 guided speaker, unguided speaker로 나눕니다.
+대화는 unguided speaker 차례부터 시작되며, guided speaker의 차례가 되면 각 모델을 통해 각각의 스킬에 해당하는 최적의 응답을 제시합니다.
+Guided speaker는 제시된 응답을 기반으로 혹은 이를 무시하고 응답을 생성하도록 합니다.
 
-`BST`를 수집하기 위한 대화에서 특정한 스킬(지식 기반, 감정적인, 사적인 상황)만을 사용하거나 
-너무 일반적인 대화(직전 대화와는 너무 다른 스킬을 사용하게되는 경향)를 막기 위해 guided speaker와 unguided speaker로 구성했음.
-guided speaker는 각 기술에 대해서만 학습된(각각 ConvAI2, ED, WoW로만 학습된) 모델들로 응답에 대한 선택지를 받을 수 있는데 이를 무시하거나 수정하거나 할 수 있음.
-대화는 unguided spspeaker로 부터 시작.
+# Poly-encoder
 
-![](assets/blenderbot/01.png)
-표 1을 보면 여러 상황에서 대화가 시작되었을 때, guided speaker가 응답으로 제안을 사용한 것은 약 21%이고 각 task에 대해 균등하게 선택된 것을 볼 수 있음
-또 unguided speaker 응답의 46.1%는 직전 대화 모드와 동일한 모드를 사용하는 것을 볼 수 있었다. (랜덤할 때는 33%에 반해)
-
-### BLended Initial Contexts
-
-각 speaker에게 ConvAI2 dataset에서 무작위로 선택된 persona 문장 쌍이 할당됨.
-서로 자신의 persona 만 볼 수 있음
-대화는 각 스킬에서 랜덤하게 선택된 한 쌍의 발화로 시작.
+기존에 두 문장을 비교하기 위해 fully self-attention을 사용하는 방식은 성능에 비해 큰 비용을 요구합니다.
+`Poly-encoder`는 `Bi-encoder`와 `Cross-encoder`를 적절하게 사용하여 낮은 비용으로 추론을 하도록 구성된 모델입니다.
 
 
+# BlenderBot
 
+이제 앞서 다루었던 3종류의 데이터와 이를 통해 구성한 `BST`, 총 4가지 데이터를 활용하여 사람과 같은 대화를 생성하는 모델을 만들려고 합니다.
+논문에서 모델은 모두 transformer를 사용하는 3가지 구조로 구성되어 있습니다.
 
+### Retriever
 
+`Retriever` 모듈은 context(dialogue history)를 입력으로 받을 떄 다음 발화 후보에서 가장 높은 점수를 가지는 발화를 선택하는 작업을 진행합니다.
+학습 데이터의 모든 응답이 발화 후보가 되며, 여기서 가장 높은 점수를 받은 응답을 선택하는 것이죠.
+입력 context의 응답으로 올 수 있는 $N$개의 후보를 선정하는 방법으로 `FAISS`를 사용하였습니다.
 
+논문에서 $N=64$인 `poly-encoder`를 이용하여 이를 구현하였습니다.
+Cross-entrophy loss를 이용하여 $y_{cand_1}, \cdots, y_{cand_n}$ 중에서 $y_{cand_1}$ 을 제외한 나머지는 negative sampling 방식으로 학습을 진행했습니다.
+이때 batch의 각 element를 gold candidate로 두어 하나의 batch 안에서 발화 후보들을 한번만 embedding 하는 방식으로 빠르게 학습할 수 있었어요.
 
+### Generator
 
+`Generator` 모듈은 context와 `Retriever` 모듈을 통해 선택된 발화 후보(best candidate)를 이용하여 응답을 생성하는 작업을 진행합니다.
+Context와 best candidate를 [sep] 토큰으로 구분하여 만든 토큰들을 입력으로 주는 것이죠.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Introduction
-
-우리는 사람이 보기에 훌륭한 open-domain chabot을 만드는 레시피를 제공합니다.
-단순하게 모델의 크기를 늘리는 것을 넘어 우리는 두 가지 부분에서 연구를 진행어요.
-
-* Blending Skills  
-우리는 모델이 개성, 매력, 지식, 공감에 대해 초점을 맞추는 작업을 선택했습니다.
-`BST(Blended Skill Talk)`를 이용하여 좋은 성과를 달성하였는데,
-이는 training data와 initial conversational context(페르소나, 주제와 같은)를 제공하므로 개성, 매력, 지식, 공감을 타겟하도록 합니다.
-`BST`를 사용하는 작은 모델이 그렇지 않은 큰 모델과 비슷하거나 더 뛰어나 성능을 보여주었어요.
-또한 `BST`에서 바람직한 특성을 강조하면서, 이러한 튜닝이 toxicity과 같은 바람직하지 않은 특성을 최소화하는 것을 볼 수 있었습니다.
-
-* Generation Strategies  
-동일한 모델에 서로 다른 decoding 알고리즘을 선택하는 것만으로 다른 결과를 낼 수 있습니다.
-특히 응답의 길이가 사람이 판단하기에 중요하다는 것을 볼 수 있죠.
-예를 들어 너무 짧은 응답은 지루하거나 관심 없어 보이고, 너무 길면 장황하고 대화에 집중하지 않는 것처럼 보입니다.
-우리는 sampling에 비해 beam search가 열등하다는 연구와 다르게, 하이퍼 파라미터를 잘 조절하여 trade-off 관계에서 뛰어난 결과를 만들 수 있다고 생각해요.
-
-사람을 통한 평가는 정확한 셋팅값에 따라 달라질 수 있다고 생각합니다.
-모델 성능은 주어진 주제의 유무, 전체 대화 길이, 상대방의 선택과 같은 구체적인 지시에 영향을 받습니다.
-우리는 프롬프트 없이 짧은 multi-turn conversation에서 성능을 보여드립니다.
-또한 재현 가능하도록 모델과 fine-tuning을 위한 코드, 가중치등을 공개합니다.
-인간 평가에서 우리의 모델이 `Meena`를 앞서는 결과를 가집니다.
-
-이러한 성능에도 우리는 아직 open-domain conversation 문제를 전부 해결했다고 생각하지 않습니다.
-그러므로 우리는 우리의 모델의 한계를 분석하고 이를 해결하려고 시도할 것입니다.
-특히 <mark>자세하기 물어볼때 깊은 지식의 부족, 간단한 어휘를 사용하려는 경향, 자주 사용되는 문구를 반복하려는 경향</mark>을 가집니다. 
-
-# Model architecture
-
-우리는 retrieval, generative, retrieve-andrefine, 총 3가지 종류의 모델에 대해 다룰 것입니다.
-위 모델들은 모두 트랜스포머를 사용합니다.
-
-## Retriever
-
-![](assets/RBODC/00.png)
-
-Retrieval system은 대화 이력(context)를 입력으로 대량의 후보지에 점수를 매겨, 가장 높은 점수의 후보를 선택하는 방식으로 다음 대화를 만들어냅니다.
-우리는 `poly-encoder` architecture를 사용했습니다.
-`Poly-encoder`는 multiple representation(N 코드, N은 하이퍼 파라미터)을 이용하여 context의 global feature를 인코딩합니다.
-이는 각 후보 응답들에 의해 attentioned 됩니다.
-여기서 마지막 attention mechanism은single global vector representation(bi-encoders) 보다 향상된 성능을 제공합니다.
-또 입력과 출력을 단순히 연결하는것 보다(cross-encoder) 계산 가능합니다.
-`Poly-encoder`는 많은 dialogue task에서 SOTA를 달성하였습니다.
-우리는 2가지 크기(256M, 622M 파라미터)의 `poly-encoder`를 사용하였습니다.
-여기서 N=64로 설정하였습니다. 
+논문에서 Seq2Seq 모델을 이용하여 이를 구현하였습니다.
+특히 2 encoder layer와 24 encoder layer로 구성된 2.7B 파라미터의 모델과 같이 적은 encoder와 많은 decoder로 이루어졌어요.
+`MLE(Maximum Likelihood Estimation)` 접근으로 모델을 학습시킵니다.
+$$
+L_{MLE}^{(i)} (p_\theta, x^{(i)}, y^{(i)}) = - \sum_{t=1}^{\left| y^{(i)} \right|} \log p_\theta (y_t^{(i)} | x^{(i)}, y_{<t}^{(i)})
+$$
+$x^{(i)}$, $y^{(i)}$, $y_t^{(i)}$는 각각 gold input context, gold next-utterance, $y_{(i)}$의 $t$ 번째 토큰입니다.
 
 <Comment>
-Poly-encoder에 대한 기본적인 지식을 알고 봐야 할듯. 내용이 잘 이해가 안감
-일단 간단하게 간단하게 넘어가고 Blenderbot 2, 3에서도 poly-encoder를 사용하면 그떄 관련 논문을 읽어보자!
+Retriever 모듈에서 context와 candidate의 cross-attention 연산을 통해 생성된 $y_{ctxt}$와 $y_{cand}$를 dot product 하여 score를 구합니다.
+그리고 context와 가장 높은 점수를 얻은 candidate를 tokenize 하여 이를 Decoder 모듈의 입력으로 사용하는 방식이죠.
+그런데 왜 이미 context와 candidate의 정보를 모두 이용한 $y_{ctxt}$를 입력으로 사용하지 않을까요?
+
+생각해보니 BlenderBot은 end-to-end 모델이 아닌 각 모듈들을 각자 다른 방식으로 fine-tuning을 진행하기 떄문에 그런듯.
 </Comment>
-
-## Generator
-
-우리는 표준 seq2seq 트랜스포머 모델을 사용하였습니다.
-기본적으로 ParlAI version을 기반으로 구현하였고, 사전학습된 BPE tokenization을 사용하였습니다.
-우리는 3가지 크기의(90M, 2.7B, 9.4B) 모델을 사용하였습니다.
-9.4B 모델은 4개의 encoder layer, 32개의 decoder layer, 4096 dimension embedding, 그리고 32 attention heads를 가집니다.
-2.7B 모델은 2개의 encoder layer, 24개의 decoder layer, 2560 dimension embedding, 그리고 32 attention heads를 가집니다.
-
-## Retrieve and Refine
-
-생성형 모델은 지루하고 반복적은 응답을 생성하는 문제를 가지고 있지만 모델 크기를 늘린다고 해결되지 않았습니다.
-또한 hallucinate knowledge와 모델에 embedded 되지 않은 외부 지식에 대해 접근이 불가능한 문제가 있었습니다.
-이러한 문제를 해결하기 위해 `retrieve and refine model`이 제시되었습니다.
-우리는 dialogue retrieval, 그리고 knowledge retrieval 두 가지로 나누어 검색 단계를 고려하였습니다.
-
-### Dialogue Retrieval
-
-우리는 단순히 section 2.1에서 다룬 retrieval-based dialogue 모델을 사용하였습니다.
-<mark>대화 이력을 이용하여 retrieval model은 먼저 응답을 생성합니다.
-이를 바로 유저에게 보여주기 보다, special separator token과 함께 generator의 input sequence로 사용합니다.</mark>
-Generator는 이를 이용하여 응답을 생성하는 것이죠.
-Retrieval model은 인간이 작성한 발화를 생성하는데 이는 표준 generative model이 생성한 발화보다 더 사람다운 경향이 있습니다.
-따라서 generator가 이러한 발화의 요소를 복사할지 아닐지 선택하도록 학습하는 것은 더 향상된 성능을 만들 것입니다.
 
 <Comment>
-Retrieval model이 기존 대화 이력을 통해 어느 정도 사람과 비슷한 발화를 내놓는데
-Generator에서 이 발화에서 일부 요소를 사용할 것인지 그냥 쌩으로 지가 답을 생성할건지 결정하도록 학습한다는 소리인가?
+Retriever 모듈에서 context(input) - response(label) pair를 사용하여 학습을 진행하였는데
+Decoder 모듈에서도 context(input) - response(label) pair를 사용하는 것이 맞나?
+심지어 추론 단계에서 context - best candidate 를 토큰화한 입력을 이용하는데 이거 맞나?
+찾아보자고
 </Comment>
 
-### knowledge Retrieval
+# RetNRef(Retrieve and Refine)
+Generative model은 여전히 지루하고 반복적인 응답을 생성하는 문제가 있습니다.
+또 모델 파라미터에 embedding 되지 않은 지식에 대해서 접근하지 못하고, 이로 인해 거짓된 정보를 생성할 수 있죠.
+이러한 문제를 해결하기 위해 dialogue retrieval, knowledge retrieval 단계를 통해 조금 더 정제된 응답을 생성합니다.
 
-우리는 위와 동일한 메카니즘을 
+### Dialogue retrieval
+
