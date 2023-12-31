@@ -6,18 +6,43 @@ visible: true
 date: '2023년 12월 21일'
 ---
 
-import { Link } from "gatsby";
+import Project from '@contents/components/Project';
+import TwoCols from '@contents/components/TwoCols';
+import Cols from '@contents/components/Cols';
 
-![](assets/daeun.png)
+<Project
+    domain="LLM"
+    members="개인 프로젝트"
+    roles={['Research', "Implementation"]}
+    tools={['Pytorch']}
+    schedule='23년 12월 22일 ~ '
+/>
 
+___
+
+<TwoCols align='center'>
+<Cols size={40}>
+![](assets/index/daeun_mini.png)
+</Cols>
+<Cols size={50}>
 어렸을 때 부터 여러가지 명령(불 꺼줘, 컴퓨터 꺼줘 등등)을 처리할 수 있고, 또 사람과 같이 대화를 할 수 있는 인공지능을 만들고 싶었어요.
+
 이제 인공지능과 자연어 처리를 어느정도 배웠기 때문에, 필요한 내용을 찾아서 직접 만들어보려고 합니다.
 
-# Research
+사람과 같이 대화하는 `open-domain conversation` 작업에 관해 연구하고 구현을 진행합니다.
+</Cols>
+</TwoCols>
 
-일단 먼저 선행된 여러가지 방법들을 찾아볼거예요.
-저처럼 여러 주제에 대해 사람처럼 대화가 가능한 챗봇을 `open-domain chatbot`이라 하더라구요.
-그래서 지금까지 만들어진 open-domain chabot의 논문들을 읽는 시간을 가질거예요.
+# 🚩 프로젝트 목표
 
-1. <Link to='/293431c7-7f18-5967-a761-d7b30d865a02'>Towards a Human-like Open-Domain Chatbot</Link>
-1. <Link to='/d0a3f595-a53b-545a-9908-e5d298d2abbf'>Recipes for building an open-domain chatbot</Link>
+여러가지 명령을 처리하면서 사람 같이 반응하는 open-domain chatbot을 제작합니다.
+
+# ✏️ 개발 내용
+
+### 🔎 리서치
+
+먼저 open-domain chatbot에 관한 선행된 연구들을 조사합니다.
+
+# 📷 결과
+
+# 🤔 느낀점
