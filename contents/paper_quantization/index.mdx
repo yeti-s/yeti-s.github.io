@@ -1,0 +1,29 @@
+---
+title: 'Quantization'
+description: 'Quantization for Large Language Model'
+subject: '논문 리뷰'
+visible: true
+date: '2023년 12월 31일'
+---
+
+import Card from '@contents/components/Card';
+import CardContainer from '@contents/components/CardContainer';
+import thumnail_quant_int_arithm_only from './assets/quant_int_arithm_only/thumnail.png'
+import thumnail_smooth_quant from './assets/smooth_quant/thumnail.png';
+
+최근 LLM과 같은 큰 사이즈의 파라미터를 통한 모델을 이용하여 여러 서비스를 제공하고 있습니다.
+이에 더 적은 비용으로 서비스를 진행하기 위한 quantization이 필요하다고 생각하였어요.
+특히 범용성이 넓은 LLM에 대한 quantization 관련 논문을 보고 인사이트를 얻어보려 합니다.
+
+# 논문
+
+<CardContainer>
+    <Card src={thumnail_quant_int_arithm_only} 
+          title='Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference' 
+          description='Integer만 이용하여 추론을 진행하기 위한 quantization과 학습 방법을 소개합니다.' 
+          path={'/52fc8bf8-789f-5ebf-97de-26df1ed17f9d'}/>
+    <Card src={thumnail_smooth_quant} 
+          title='SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models' 
+          description='LLM activation의 높은 값을 가지는 특정 채널에 대해 scaling을 통한 더 적은 오차로 quantization을 진행합니다.' 
+          path={'/6b2ac1d6-57f4-5976-b7e0-e991908bba6d'}/>
+</CardContainer>

@@ -19,7 +19,7 @@ chatbot의 응답이 말이 되는지(sensibleness) 확인하고 그 대답이 "
 여기서 놀라운 점을 발견하였는데, `SSA`와 perplexity가 선형에 가까운 높은 상관관계를 가지고 있다는 것을 보았어요.
 즉 perplexity를 낮게 만들도록 학습한다면, 높은 `SSA` 점수를 받을 수 있다는 것을 의미하죠.
 
-![](assets/Meena/03.png)
+![](assets/meena/03.png)
 
 위 평가에서 사람의 경우 86%,  Meena의 경우 72%로 다른 chatbot들과는 큰 차이를 보여주었어요.
 
@@ -226,8 +226,8 @@ Optimizer랑 학습 방법이 좀 신기한듯.
 그 다음 확률이 가장 높은 응답을 선택하는 방식이죠.</mark>
 이때 temperature T가 큰 값이면 다양하지만 상황에 적합하지 않는 단어를 만들어내고, 작은 값이면 안전하지만 흔한 단어만을 생성하는 것을 볼 수 있었습니다.
 
-![Table 2](assets/Meena/00.png)
-![Table 3](assets/Meena/01.png)
+![Table 2](assets/meena/00.png)
+![Table 3](assets/meena/01.png)
 
 Table 2, 3은 각각 sample-and-rank와 beam-search를 통한 방식으로 생성한 답변들입니다.
 Beam-search는 반복적이고 흥미롭지 않은 답변을 생성하지만, sample-and-rank는 다양하고 풍부한 답변들을 생성해냈죠.
@@ -297,7 +297,7 @@ M: You were trying to steer it elsewhere, I can see it.
 우리는 하이퍼 파라미터, layer 수, attention head 수, training step, ET and Transformer 등 다양한 방법으로 학습을 진행하였습니다.
 그 후 각 모델들은 auto metric(perplexity)와 human metric을 통해 평가하였구요.
 
-![Figure 5](assets/Meena/02.png)
+![Figure 5](assets/meena/02.png)
 
 Perplexity vs static sensibleness $R^2=0.93$  
 Perplexity vs static specific $R^2=0.94$  
