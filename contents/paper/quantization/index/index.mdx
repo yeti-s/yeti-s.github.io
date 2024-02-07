@@ -1,0 +1,27 @@
+---
+title: 'Quantization'
+description: 'Quantization for Large Language Model'
+date: '2024년 2월 7일'
+category: '논문'
+visible: true
+---
+
+import * as Elem from '@elements';
+
+import INT_ARITHM_ONLY from './int_arithm_only.png';
+import SMOOTH_QUANT from './smooth_quant.png';
+
+딥러닝 모델의 Quantization에 대한 논문 내용을 다룹니다.
+
+# 논문
+
+<Elem.CardContainer>
+    <Elem.Card src={INT_ARITHM_ONLY} 
+          title='Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference' 
+          description='딥러닝 모델을 Integer 만을 이용하여 Quantization 및 Training 을 진행하는 방법에 대해 소개합니다.' 
+          path={'Integer Arithm Only Quant and Train'}/>
+    <Elem.Card src={SMOOTH_QUANT} 
+          title='SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models' 
+          description='LLM에서 Activation의 특정 채널에서 이상값을 가지는 것을 기반으로 스케일링을 통해 효과적인 Quantization을 진행합니다.' 
+          path={'SmoothQuant'}/>
+</Elem.CardContainer>
