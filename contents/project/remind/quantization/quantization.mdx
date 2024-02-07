@@ -1,0 +1,321 @@
+---
+title: 'Quantization'
+description: 'LLM Quantization'
+date: '2023년 1월 23일'
+subject: '리마인드'
+visible: true
+order: 4
+---
+
+import * as Elem from '@elements';
+
+프로젝트에서 사용될 언어 모델의 규모가 너무 커
+
+기존에 연구하기 위해 사용해본 torch.quantization 모듈은 추론시 GPU를 사용할 수 없다는 단점이 있었습니다.
+이를 해결하기 위해 ONNX를 활용할 수 있을 것입니다.
+먼저 Pytorch를 활용하여 Activation과 Weight에 대한 Scale을 진행하는 Layer를 생성하고, ONNX로 변환하여 Quantization을 진행합니다.
+그리고 GPU로 불러와서 추론을 진행하는 방식으로 해결해볼 생각입니다.
+
+# ONNX
+
+어쩌면 ONNX에서 모듈을 수정할 수 있을 것 같아서 먼저 ONNX가 무엇인지, Pytorch와는 어떤 관계인지 알고 가야할 것 같습니다.
+
+
+# ONNX Quantization
+
+위 방법을 실행하기 전에 Scaling을 진행하는 레이어에 대해서는 Quantization이 진행되지 않아야 하는 것을 확인해야 합니다.
+또 pytorch 모델을 onnx로 변환하고 이를 Quantization 하여 추론하는 방법을 알아야 하죠.
+간단한 모델을 활용해서 테스트를 해보자구요.
+
+```python
+import torch
+import torch.nn as nn
+
+class CustomModule(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.register_buffer('scale', torch.tensor(100))
+        self.fc = nn.Linear(1024, 1)
+    
+    def forward(self, x):
+        x = x * self.scale
+        return self.fc(x)
+        
+custom = CustomModule()
+dummy_input = torch.rand((1, 1024))
+custom(dummy_input)
+```
+
+```
+tensor([[-42.1489]], grad_fn=<AddmmBackward0>)
+```
+
+
+먼저 SmoothQuant의 레이어와 같이 입력에 Scaling을 적용한 후 연산을 진행하는 방법으로 간단한 모델을 구현해봤습니다.
+Dummy 입력을 모델에 넣었더니, 52.9578 이라는 결과를 얻을 수 있었습니다.
+
+```python
+import onnxruntime as ort
+import numpy as np
+
+input_names = ['x']
+output_names = ['y']
+torch.onnx.export(
+    custom,
+    dummy_input,
+    verbose=True,
+    f='tmp/custom_model.onnx',
+    input_names=input_names,
+    output_names=output_names,
+)
+
+def infer_onnx_model(model_path):
+    session = ort.InferenceSession(model_path)
+    input_name = session.get_inputs()[0].name
+    return session.run(None, {input_name: dummy_input.numpy()})
+
+infer_onnx_model('tmp/custom_model.onnx')
+```
+
+```
+[array([[-42.14892]], dtype=float32)]
+```
+
+이제 이 모델을 ONNX로 변환하였습니다.
+변환시 입력의 크기를 알기 위해 Dummy Input을 요구하더라구요.
+이후 변환된 ONNX 파일을 불러와 추론을 하였습니다.
+PyTorch 모델과 같은 결과를 얻는 것을 볼 수 있었죠.
+
+```python
+from onnxruntime.quantization import quantize_dynamic
+quantize_dynamic('tmp/custom_model.onnx', 'tmp/q_custom_model.onnx')
+infer_onnx_model('tmp/q_custom_model.onnx')
+```
+
+```
+[array([[-40.4947]], dtype=float32)]
+```
+
+Dynamic Quantization을 사용하여 모델을 변환하고 이를 같은 입력에 대해 추론을 진행하였습니다.
+기존 결과와 약간 달라지는 것을 볼 수 있었죠.
+아무튼 이런 방식으로 Quantization을 적용할 수 있겠네요.
+
+그런데 과연 우리가 원하는 대로 Non-Learnable Parameter에 대해서도 양자화가 진행되는지 확인할 필요가 있을 것 같습니다.
+그래야 SmoothQuant를 적용할 수 있으니까요.
+
+```python
+import onnx
+
+onnx_model = onnx.load('tmp/q_custom_model.onnx')
+graph_def = onnx_model.graph
+
+for node in graph_def.node:
+    print('name:', node.name)
+    print('op_type:', node.op_type)
+    print('input:', node.input)
+    print('output:', node.output)
+```
+
+```
+name: /Mul
+op_type: Mul
+input: ['x', 'onnx::Mul_7']
+output: ['/Mul_output_0']
+
+name: /Mul_output_0_QuantizeLinear
+op_type: DynamicQuantizeLinear
+input: ['/Mul_output_0']
+output: ['/Mul_output_0_quantized', '/Mul_output_0_scale', '/Mul_output_0_zero_point']
+
+name: /fc/Gemm_MatMul_quant_scales_mul
+op_type: Mul
+input: ['/Mul_output_0_scale', 'fc.weight_scale']
+output: ['/fc/Gemm_MatMul_quant_scales_mul:0']
+
+name: /fc/Gemm_MatMul_quant
+op_type: MatMulInteger
+input: ['/Mul_output_0_quantized', 'fc.weight_quantized', '/Mul_output_0_zero_point', 'fc.weight_zero_point']
+output: ['y_MatMul_output_quantized']
+
+name: y_MatMul_output_quantized_cast
+op_type: Cast
+input: ['y_MatMul_output_quantized']
+output: ['y_MatMul_output_quantized_cast_output']
+
+
+name: /fc/Gemm_MatMul_quant_output_scale_mul
+op_type: Mul
+input: ['y_MatMul_output_quantized_cast_output', '/fc/Gemm_MatMul_quant_scales_mul:0']
+output: ['y_MatMul']
+
+name: /fc/Gemm_Add
+op_type: Add
+input: ['y_MatMul', 'fc.bias']
+output: ['y']
+```
+ 
+결과를 보니 CustomModule에서 설정한 scale 값을 양자화 없이 입력 x에 곱하고난 후 Linear 레이어에 넣는 것을 확인할 수 있습니다.
+아마 ONNX에서 미리 지정해둔 형식의 레이어에 대해서만 Quantization을 진행하는 것 같아요.
+SmoothQuant를 적용하는 것이 어렵지 않겠네요.
+
+# ONNX SmoothQuant
+
+위와 같은 방식으로 ONNX에서 SmoothQuant를 적용하여 GPU를 이용한 추론을 진행할 수 있다는 것을 보았습니다.
+그렇다면 실제로 BERT 모델에 적용하여 테스트를 진행해볼게요.
+
+```python
+from datasets import load_dataset
+from transformers import BertTokenizer, BertForSequenceClassification
+from torch.utils.data import DataLoader, TensorDataset
+
+import torch
+import torch.nn as nn
+import numpy as np
+
+import onnxruntime as ort
+
+MODEL_NAME = 'yoshitomo-matsubara/bert-large-uncased-qnli'
+MAX_LENGTH = 256
+BATCH_SIZE = 8
+
+model = BertForSequenceClassification.from_pretrained(MODEL_NAME)
+tokenizer = BertTokenizer.from_pretrained(MODEL_NAME)
+dataset = load_dataset('glue', 'qnli', split=['test', 'validation'])
+def tokenize(data):
+    return tokenizer(data['question'], data['sentence'], truncation=True, max_length=MAX_LENGTH, padding='max_length', return_tensors='pt')
+
+def create_dataloader(dataset, batch_size):
+    input_ids = torch.tensor(dataset['input_ids'])
+    attention_masks = torch.tensor(dataset['attention_mask'])
+    token_type_ids = torch.tensor(dataset['token_type_ids'])
+    tensor_dataset = TensorDataset(input_ids, attention_masks, token_type_ids)
+    return DataLoader(tensor_dataset, batch_size = batch_size)
+
+test_dataloader = create_dataloader(tokenize(dataset[0][:1000]), BATCH_SIZE)
+val_dataloader = create_dataloader(tokenize((dataset[1][:500])), BATCH_SIZE)
+
+```
+
+SmoothQuant가 작은 모델에 대해서 좋은 성능을 내지 못하지만,
+예전에 테스트를 진행했던 BERT-Large 모델의 QNLI 작업은 SmoothQuant를 적용하였을 때 기존의 Quantization 방식보다 더 높은 정확도를 보여주었기에 이를 활용하겠습니다.
+
+```python
+@torch.no_grad()
+def predict(model, dataloader, device=torch.device('cuda')):
+    model.to(device)
+    model.eval()
+    
+    preds = []
+    for _, batch in enumerate(dataloader):
+        batch_inputs = tuple(t.to(device) for t in batch)
+        inputs = {
+            'input_ids': batch_inputs[0],
+            'attention_mask': batch_inputs[1],
+            'token_type_ids': batch_inputs[2]
+        }
+        
+        outputs = model(**inputs)
+        preds.append(outputs[0].argmax(dim=1))
+    
+    preds = torch.cat(preds)
+    return preds
+
+preds = predict(model, test_dataloader).cpu().numpy()
+
+def to_onnx(model, onnx_file):
+    model.cpu() 
+    dummy_input = tokenizer("This is a sample sentence", return_tensors="pt")
+    input_names = ['input_ids', 'attention_mask', 'token_type_ids']
+    output_names = ['logits']
+    dynamic_axes={'input_ids': {0: 'batch_size', 1: 'sequence'}, 
+                'attention_mask': {0: 'batch_size', 1: 'sequence'},
+                'token_type_ids': {0: 'batch_size', 1: 'sequence'}, 
+                'logits': {0: 'batch_size', 1: 'sequence'}}
+
+    torch.onnx.export(
+        model,
+        tuple(dummy_input.values()),
+        verbose=True,
+        f=onnx_file,
+        input_names=input_names,
+        output_names=output_names,
+        dynamic_axes=dynamic_axes,
+    )
+
+to_onnx(model, 'bert/bert-large.onnx')
+```
+
+ONNX 모델과 비교를 하기 위해 test 데이터를 통해 추론을 진행하였습니다.
+또 모델을 기본적인 Quantization 방법을 적용하여 테스트한 결과와 비교하기 위해  
+
+```python
+from functools import partial
+
+def get_act_scales(model):
+    model.eval()
+    act_scales = {}
+
+    # get maximum channel values
+    def stat_tensor(name, tensor):
+        hidden_dim = tensor.shape[-1]
+        tensor = tensor.view(-1, hidden_dim).abs().detach()
+        comming_max = torch.max(tensor, dim=0)[0].float().cpu()
+        if name in act_scales:
+            act_scales[name] = torch.max(act_scales[name], comming_max)
+        else:
+            act_scales[name] = comming_max
+
+    def stat_input_hook(m, x, y, name):
+        if isinstance(x, tuple):
+            x = x[0]
+            stat_tensor(name, x)
+        
+    # register hook on every Linear layer
+    hooks = []
+    for name, m in model.named_modules():
+        if isinstance(m, nn.Linear):
+            hooks.append(
+                m.register_forward_hook(
+                    partial(stat_input_hook, name=name))
+            )
+    
+    predict(model, val_dataloader)
+    
+    # remove hooks
+    for h in hooks:
+        h.remove()
+    
+    return act_scales
+
+act_scales = get_act_scales(model, val_dataloader)
+
+class SmoothLinear(nn.Module):
+    def __init__(self, linear, act_scale, alpha=0.5) -> None:
+        super().__init__()
+        weight = linear.weight.detach()
+        w_abs_max = weight.abs().max(dim=0)[0].clamp_(min=1e-5)
+        scale = act_scale.pow(alpha).div_(w_abs_max.pow(1 - alpha)).clamp_(min=1e-5)
+        linear.weight.data = weight * scale
+        
+        self.register_buffer("scale", scale)
+        self.linear = linear
+        
+    def forward(self, x):
+        x = x / self.scale
+        return self.linear(x)
+
+def smooth_quantize(model, act_scales):
+    model.cpu()
+    for name, act_scale in act_scales.items():
+        keys = name.split(".")
+        module = model
+        for key in keys[:-1]:
+            module = getattr(module, key)
+        
+        if 'query' in name or 'key' in name or 'value' in name or 'intermediate' in name:
+            setattr(module, keys[-1], SmoothLinear(getattr(module, keys[-1]), act_scale))
+            
+smooth_quantize(model, act_scales)
+
+to_onnx(model, 'bert/bert-large-smooth.onnx')
+```
