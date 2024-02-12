@@ -1,209 +1,110 @@
-👀 [Yeti Docs](https://yeti-s.github.io/)
+# gatsby-remark-images
 
-# 📚 문서
+Processes images in markdown so they can be used in the production build.
 
-기존에 개발을 진행하면서 이전에 이용했던 기술에 대하여 다시금 사용해야 할 때가 종종 있었어요. 
-그럴 때마다 예전 코드를 보며 기억을 상기하는 것이 생각보다 불편한 경험이더라고요. 
-그래서 개발을 진행하며 공부한 내용이나 사용한 기술에 대해 정리하는 것이 필요하다고 느껴졌습니다. 
+In the processing, it makes images responsive by:
 
-해당 페이지는 [Gatsby Theme Document](https://www.gatsbyjs.com/plugins/gatsby-theme-document/)를 기반으로 생성되었습니다.
-Typescript로 이식하고 아키텍처를 변경하여 리펙토링을 진행하였어요.
+- Adding an elastic container to hold the size of the image while it loads to
+  avoid layout jumps.
+- Generating multiple versions of images at different widths and sets the
+  `srcset` and `sizes` of the `img` element so regardless of the width of the
+  device, the correct image is downloaded.
+- Using the "blur up" technique popularized by [Medium][1] and [Facebook][2]
+  where a small 20px wide version of the image is shown as a placeholder until
+  the actual image is downloaded.
 
-### 메타데이터 규칙
+## Install
 
-각 컨텐츠의 메인에 해당하는 index.mdx 파일은 아래와 같은 메타데이터를 가집니다.
-```
----
-title: 문서의 제목 (필수!)
-description: 문서에 대한 설명
-date: 문서 최종 수정 날짜
-category: 문서의 카테고리 (필수!)
-visible: 문서 공개 여부
-order: 문서 정렬 순서
----
-
-...
-...
+```shell
+npm install gatsby-remark-images gatsby-plugin-sharp
 ```
 
-해당 컨텐츠의 페이지는 `/{title}`의 URL을 가집니다.
+## How to use
 
-컨텐츠의 하위 항목에 해당하는 *.mdx 파일은 아래와 같은 메타데이터를 가집니다.
-```
----
-title: 문서의 제목 (필수!)
-description: 문서에 대한 설명
-date: 문서 최종 수정 날짜
-subject: 문서의 주제 (필수!)
-visible: 문서 공개 여부
-order: 문서 정렬 순서
----
-
-...
-...
-```
-
-해당 하위 컨텐츠의 페이지는 `/{subject}/{title}`의 URL을 가집니다.
-
-### 폴더 구조
-
-문서를 구성하는 컨텐츠는 아래와 같은 폴더 구조를 따라야 합니다.
-
-```
-|-- contents
-|     |-- elements
-|           |-- index.ts
-|           |-- elem1.tsx
-|           |-- elem2.tsx
-|           |-- ...
-|     |-- index
-|           |-- index.mdx
-|     |-- category1
-|           |-- subject1
-|                 |-- index
-|                       |-- index.mdx
-|                       |-- img1.png
-|                       |-- img2.png
-|                       |-- ...
-|                 |-- title1
-|                       |-- title1.mdx
-|                       |-- img1.png
-|                 |-- ...
-|           |-- subject2
-|                 |-- ...
-|           |-- ...
-|     |-- ...
-```
-
-* contents/index 폴더에 존재하는 index.mdx 파일은 문서의 첫 페이지에 대한 내용을 나타냅니다.
-* subject 폴더에 존재하는 index.mdx 파일은 해당 주제에 대한 기본 페이지 내용을 나타냅니다.
-* subject 폴더에 존재하는 index.mdx 제외한 나머지 .mdx 파일은 해당 주제의 하위 항목으로 표시됩니다.
-* 각 페이지에 들어갈 이미지와 같은 데이터는 해당 페이지를 구성하는 .mdx 파일과 동일한 위치에 존재합니다.
-* elements 폴더에 .tsx 파일은 컨텐츠에 사용할 ReactNode들을 나타냅니다.
-
-### Element 추가 및 사용
-
-새로운 Element를 추가할 때 index.ts 파일을 아래와 같이 변경해야합니다.
-```typescript
-// @elements/index.ts
-import NewElem from './NewElem';
-...
-export {
-      ...
-      NewElem
-};
-```
-추가한 Element는 아래와 같이 사용할 수 있습니다.
 ```javascript
-// some.mdx
-import * as Elem from '@elements';
-<Elem.NewElem>
-      내용
-</Elem.NewElem>
+// In your gatsby-config.js
+plugins: [
+  `gatsby-plugin-sharp`,
+  {
+    resolve: `gatsby-transformer-remark`,
+    options: {
+      plugins: [
+        {
+          resolve: `gatsby-remark-images`,
+          options: {
+            // It's important to specify the maxWidth (in pixels) of
+            // the content container as this plugin uses this as the
+            // base for generating different widths of each image.
+            maxWidth: 590,
+          },
+        },
+      ],
+    },
+  },
+]
 ```
 
+## Usage in Markdown
 
+You can reference an image using the relative path, where that path is relative to the location of the Markdown file you're typing in.
 
+```md
+![Alt text here](./image.jpg)
+```
 
-# ✨ 업데이트 내역
-`현재 버전 : 2.4.1`
+By default, the text `Alt text here` will be used as the alt attribute of the generated `img` tag. If an empty alt attribute like `alt=""` is wished,
+a reserved keyword `GATSBY_EMPTY_ALT` can be used.
 
-## 버전 2
+```markdown
+![GATSBY_EMPTY_ALT](./image.png)
+```
 
-**2.4.1 업데이트**
+## Options
 
-* 컨텐츠의 유형에 따라 메타데이터 구조가 변경됩니다.
+| Name                    | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxWidth`              | `650`   | The `maxWidth` in pixels of the div where the markdown will be displayed. This value is used when deciding what the width of the various responsive thumbnails should be.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `linkImagesToOriginal`  | `true`  | Add a link to each image to the original image. Sometimes people want to see a full-sized version of an image e.g. to see extra detail on a part of the image and this is a convenient and common pattern for enabling this. Set this option to `false` to disable this behavior.                                                                                                                                                                                                                                                                                                                                                  |
+| `showCaptions`          | `false` | Add a caption to each image with the contents of the title attribute, when this is not empty. If the title attribute is empty but the alt attribute is not, it will be used instead. Set this option to true to enable this behavior. You can also pass an array instead to specify which value should be used for the caption — for example, passing `['alt', 'title']` would use the alt attribute first, and then the title. When this is set to `true` it is the same as passing `['title', 'alt']`. If you just want to use the title (and omit captions for images that have alt attributes but no title), pass `['title']`. |
+| `markdownCaptions`      | `false` | Parse the caption as markdown instead of raw text. Ignored if `showCaptions` is `false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `wrapperStyle`          |         | Add custom styles to the div wrapping the responsive images. Use the syntax for the style attribute e.g. `margin-bottom:10px; background: red;` or a function returning a style string which receives the information about the image you can use to dynamically set styles based on the `aspectRatio` for example.                                                                                                                                                                                                                                                                                                                |
+| `backgroundColor`       | `white` | Set the background color of the image to match the background image of your design.<br /><br />**Note:**<br />- set this option to `transparent` for a transparent image background.<br /> - set this option to `none` to completely remove the image background.                                                                                                                                                                                                                                                                                                                                                                  |
+| `quality`               | `50`    | The quality level of the generated files.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `withWebp`              | `false` | Additionally generate WebP versions alongside your chosen file format. They are added as a srcset with the appropriate mimetype and will be loaded in browsers that support the format. Pass `true` for default support, or an object of options to specifically override those for the WebP files. For example, pass `{ quality: 80 }` to have the WebP images be at quality level 80.                                                                                                                                                                                                                                            |
+| `withAvif`              | `false` | Additionally generate AVIF versions alongside your chosen file format. They are added as a srcset with the appropriate mimetype and will be loaded in browsers that support the format. Pass `true` for default support, or an object of options to specifically override those for the AVIF files. For example, pass `{ quality: 80 }` to have the AVIF images be at quality level 80.                                                                                                                                                                                                                                            |
+| `tracedSVG`             | `false` | Use traced SVGs for placeholder images instead of the "blur up" effect. Pass `true` for traced SVGs with the default settings (seen [here][3]), or an object of options to override the defaults. For example, pass `{ color: "#F00", turnPolicy: "TURNPOLICY_MAJORITY" }` to change the color of the trace to red and the turn policy to `TURNPOLICY_MAJORITY`. See [`node-potrace` parameter documentation][4] for a full listing and explanation of the available options.                                                                                                                                                      |
+| `loading`               | `lazy`  | Set the browser's native lazy loading attribute. One of `lazy`, `eager` or `auto`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `decoding`              | `async` | Set the browser's native decoding attribute. One of `async`, `sync` or `auto`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `disableBgImageOnAlpha` | `false` | Images containing transparent pixels around the edges results in images with blurry edges. As a result, these images do not work well with the "blur up" technique used in this plugin. As a workaround to disable background images with blurry edges on images containing transparent pixels, enable this setting.                                                                                                                                                                                                                                                                                                               |
+| `disableBgImage`        | `false` | Remove background image and its' inline style. Useful to prevent `Stylesheet too long` error on AMP.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `srcSetBreakpoints`     |         | By default gatsby generates 0.25x, 0.5x, 1x, 1.5x, 2x, and 3x sizes of thumbnails. If you want more control over which sizes are output you can use the `srcSetBreakpoints` parameter. For example, if you want images that are 200, 340, 520, and 890 wide you can add `srcSetBreakpoints: [ 200, 340, 520, 890 ]` as a parameter. You will also get `maxWidth` as a breakpoint (which is 650 by default), so you will actually get `[ 200, 340, 520, 650, 890 ]` as breakpoints.                                                                                                                                                 |
 
-**2.4.0 업데이트**
+## dynamic wrapperStyle example
 
-* 컨텐츠 메인과 하위 내용 파일의 메타데이터 구조가 변경됩니다.
+```javascript
+{
+  resolve: `gatsby-remark-images`,
+  options: {
+    maxWidth: 800,
+    wrapperStyle: fluidResult => `flex:${_.round(fluidResult.aspectRatio, 2)};`,
+  },
+}
+```
 
-**2.4.0 업데이트**
-> 기존의 폴더 구조는 컨텐츠에 들어가는 이미지와 같은 파일들이 상대 경로로 사용되었습니다.
-또 컨텐츠가 주제 폴더에 종속적으로 존재해야 했습니다.
-이를 각 컨텐츠와 이미지가 모두 독립적으로 존재할 수 있도록 폴더 구조를 변경하였습니다.
-또한 페이지의 URL을 주제와 파일명을 통해 어느 정도 예측 가능하도록 변경하였습니다.
+## Supported Formats
 
-* 컨텐츠의 폴더 구조를 변경하였습니다.
-* 페이지의 URL을 주제와 파일명에 의해 정해집니다.
+This plugin will support the following formats:
 
-**2.3.1 업데이트**
+- JPEG
+- PNG
+- WEBP
+- TIFF
+- AVIF
 
-* 2열로 나눠 작성하는 컴포넌트를 미디어 크기에 따라 1열로 보이도록 설정합니다.
+Since [Sharp][5] is used for image processing, this plugin will not support GIFs or SVGs. If you would like to render these file types with the image markdown syntax, use the [`gatsby-remark-copy-linked-files`](https://www.gatsbyjs.com/plugins/gatsby-remark-copy-linked-files/) plugin. Do note with this it will load in the images, but won't use the features of [Sharp][5] such as the elastic container or the blur-up enhancements.
 
-**2.3.0 업데이트**
-
-* 콘텐츠 작성시 2열로 나눠서 사용할 수 있는 컴포넌트를 추가합니다. 
-* 콘텐츠 작성시 자세히-요약 컴포넌트를 추가합니다.
-* 콘텐츠 작성시 카드 컴포넌트의 제목이 일정 크기를 초과할 경우 줄임표를 사용하도록 변경합니다.
-
-**2.2.0 업데이트**
-
-* 컨텐츠 비공개 옵션이 추가됩니다.
-* 컨텐츠 날짜를 설정할 수 있도록 변경하였습니다.
-
-**2.1.1 업데이트**
-
-* 좌측 사이드바에 스크롤 기능이 작동하지 않던 현상이 수정됩니다.
-
-**2.1.0 업데이트**
-
-* 좌측 사이드바에 구분선 항목을 추가합니다.
-* 좌측 사이드바에 하위 목록의 갯수를 표시합니다.
-
-**2.0.0 업데이트**
-> 기존 `Gatsby Theme Document`는 `Gatsby V2` 최신 버전의 패키지를 추가하는 부분에서 어려움을 겪었습니다.
-이에 추후 확장성을 위해 최신 버전으로 업그레이드가 필요하다고 판단하여 `Gatsby V5`로 업데이트를 진행하였습니다.
-버전의 차이가 크게 났기 때문에 많은 변경 사항이 발생하였고 호환되지 않는 부분이 많아 대부분의 기능을 새로 작성해야 하는 소요가 발생하였습니다.
-이 기회에 기존의 `javascript` 기반으로 이루어진 모듈을 `typescript` 기반으로 변경하여 효율 또한 높이고자 하였습니다.
-이에 따라 현재까지 작성한 문서의 일부가 기존 형식과 맞지 않을 수 있습니다.
-
-* Gatsby v5, Typescript 기반으로 변경하였습니다.
-* 모든 컴포넌트를 `Atomic Design` 패턴에 맞춰 새로 구성하였습니다.
-
-> 여러 기기에서 사용할 수 있도록 화면 크기에 따라 더욱 부드럽게 레이아웃을 변경하였습니다.
-또한 일부 기능을 추가하였습니다.
-
-* 테마가 Light, Dark 두 가지로 변경됩니다.
-* 좌측 사이드바의 하위 목록이 부드럽게 나타나도록 변경하였습니다.
-* 화면 크기가 변경함에 따라 좌우 사이드바가 축소하고 확장하도록 변경하였습니다.
-* 좌측 사이드바가 축소하였을 때 생성되는 메뉴 버튼이 부드럽게 나타나도록 변경하였습니다.
-* 문서 내용의 넓이를 확장 축소하는 버튼을 추가하였습니다.
-* 인스타그램 버튼을 추가하였습니다.
-
-> `.mdx`파일을 사용하여 생성된 내용들의 UI에 많은 변화를 주었습니다.
-기본적으로 github의 스타일과 비슷하게 유지하였고, 일부는 문서 양식에 맞게 변경한 부분도 있습니다.
-
-* 문서 제목 부위에 유저와 수정된 날짜가 표기됩니다.
-* `Heading`의 크기와 구분선의 위치가 변경됩니다.
-* 기존 인용 블럭이 작동되지 않던 오류를 수정하였습니다.
-* 기존 붉은 글씨로 변하던 Code 형식이 `이와 같이` 표현됩니다.
-* Code Block이 Dark 테마에 맞춰 색을 변경합니다.
-
-
-## 버전 1
-**1.1.3 업데이트**
-* 일부 프로그램 언어에 대해서만 라인 넘버를 표시하도록 변경하였습니다.
-
-**1.1.2 업데이트**
-* 모듈을 불러올 때 절대 경로를 사용하게 변경하였습니다.
-
-**1.1.1 업데이트**
-* 컨텐츠 내용이 화면 사이즈에 맞춰 변화하도록 변경하였습니다.
-* 일정 길이 이상의 컨텐츠 목차에 대해 줄임표를 생성하도록 변경하였습니다.
-
-**1.1.0 업데이트**
-> 인터페이스 개선을 하였습니다.
-
-* 우측 사이드바 목록에 타이틀 계층 구조를 따라 표시합니다.
-* 코드 블럭의 가독성을 높이기 위해 스타일을 변화시켰습니다.
-* 컨텐츠 폴더 구조를 독립적으로 변경하였습니다.
-
----
-**1.0.0 업데이트**
-> 프로젝트를 진행하며 공부한 내용이나 개발 과정등을 기록으로 남기기 위해 블로그를 개설합니다.  
-당장 필요한 혹은 개발 소요가 크지 않은 기능을 우선적으로 추가하였습니다.
-
-* 컨텐츠에 수식을 입력할 수 있습니다.
-* 좌측 사이드바 목록이 오름차순으로 정렬되어 보여집니다.
-* 좌측 사이드바 하위 목록을 가진 컨텐츠의 기본 상태가 접힌 상태가 됩니다.
+[1]: https://jmperezperez.com/medium-image-progressive-loading-placeholder/
+[2]: https://code.facebook.com/posts/991252547593574/the-technology-behind-preview-photos/
+[3]: https://www.npmjs.com/package/gatsby-plugin-sharp#tracedsvg
+[4]: https://github.com/tooolbox/node-potrace#parameters
+[5]: https://github.com/lovell/sharp
